@@ -149,25 +149,30 @@ public final class ReciprocalArraySum {
         // Crear ForkJoinPool con 2 hilos
         ForkJoinPool pool = new ForkJoinPool(2);
         
-        // Dividir el arreglo en dos mitades
-        int mid = input.length / 2;
-        
-        // Crear dos tareas para procesar cada mitad del arreglo
-        ReciprocalArraySumTask leftTask = new ReciprocalArraySumTask(0, mid, input);
-        ReciprocalArraySumTask rightTask = new ReciprocalArraySumTask(mid, input.length, input);
-        
-        // Ejecutar las tareas en paralelo
-        leftTask.fork();  // Ejecuta la primera tarea de forma asíncrona
-        rightTask.compute();  // Ejecuta la segunda tarea en el hilo actual
-        leftTask.join();  // Espera a que termine la primera tarea
-        
-        // Combinar los resultados
-        double sum = leftTask.getValue() + rightTask.getValue();
-        
-        // Cerrar el pool
-        pool.shutdown();
-        
-        return sum;
+        try {
+            // Dividir el arreglo en dos mitades
+            int mid = input.length / 2;
+            
+            // Crear dos tareas para procesar cada mitad del arreglo
+            ReciprocalArraySumTask leftTask = new ReciprocalArraySumTask(0, mid, input);
+            ReciprocalArraySumTask rightTask = new ReciprocalArraySumTask(mid, input.length, input);
+            
+            // Ejecutar las tareas en paralelo usando el pool personalizado
+            pool.submit(leftTask);
+            pool.submit(rightTask);
+            
+            // Esperar a que ambas tareas terminen
+            leftTask.join();
+            rightTask.join();
+            
+            // Combinar los resultados
+            double sum = leftTask.getValue() + rightTask.getValue();
+            
+            return sum;
+        } finally {
+            // Cerrar el pool en el bloque finally para asegurar que siempre se cierre
+            pool.shutdown();
+        }
     }
 
     /**
