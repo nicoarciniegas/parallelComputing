@@ -1,5 +1,6 @@
 package co.edu.unal.paralela;
 
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RecursiveAction;
 
 /**
@@ -125,7 +126,11 @@ public final class ReciprocalArraySum {
 
         @Override
         protected void compute() {
-            // Para hacer
+            // Calcula la suma de los recíprocos para el rango asignado
+            value = 0;
+            for (int i = startIndexInclusive; i < endIndexExclusive; i++) {
+                value += 1 / input[i];
+            }
         }
     }
 
@@ -141,13 +146,27 @@ public final class ReciprocalArraySum {
     protected static double parArraySum(final double[] input) {
         assert input.length % 2 == 0;
 
-        double sum = 0;
-
-        // Calcula la suma de los recíprocos de los elementos del arreglo
-        for (int i = 0; i < input.length; i++) {
-            sum += 1 / input[i];
-        }
-
+        // Crear ForkJoinPool con 2 hilos
+        ForkJoinPool pool = new ForkJoinPool(2);
+        
+        // Dividir el arreglo en dos mitades
+        int mid = input.length / 2;
+        
+        // Crear dos tareas para procesar cada mitad del arreglo
+        ReciprocalArraySumTask leftTask = new ReciprocalArraySumTask(0, mid, input);
+        ReciprocalArraySumTask rightTask = new ReciprocalArraySumTask(mid, input.length, input);
+        
+        // Ejecutar las tareas en paralelo
+        leftTask.fork();  // Ejecuta la primera tarea de forma asíncrona
+        rightTask.compute();  // Ejecuta la segunda tarea en el hilo actual
+        leftTask.join();  // Espera a que termine la primera tarea
+        
+        // Combinar los resultados
+        double sum = leftTask.getValue() + rightTask.getValue();
+        
+        // Cerrar el pool
+        pool.shutdown();
+        
         return sum;
     }
 
