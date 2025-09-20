@@ -100,19 +100,6 @@ public class ReciprocalArraySumTest extends TestCase {
         final long seqTimeNanos = (seqEndTime - seqStartTime) / REPEATS;
         final long parTimeNanos = (parEndTime - parStartTime) / REPEATS;
 
-        // Convert to milliseconds for display, but keep precision
-        final double seqTimeMs = seqTimeNanos / 1_000_000.0;
-        final double parTimeMs = parTimeNanos / 1_000_000.0;
-
-        // Debug: Print timing values to understand NaN issue
-        System.out.println("DEBUG - N: " + N + ", SeqTime: " + String.format("%.3f", seqTimeMs) + "ms, ParTime: " + String.format("%.3f", parTimeMs) + "ms");
-
-        // Avoid division by zero
-        if (parTimeNanos == 0) {
-            System.out.println("WARNING: Parallel time is 0, returning speedup of 1.0");
-            return 1.0;
-        }
-
         return (double)seqTimeNanos / (double)parTimeNanos;
     }
 
