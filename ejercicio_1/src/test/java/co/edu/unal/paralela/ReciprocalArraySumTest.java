@@ -80,13 +80,13 @@ public class ReciprocalArraySumTest extends TestCase {
         /*
          * Ejecuta varias repeticiones de la versiones secuncial y paralela para obtener una medida más exacta del desempeño paralelo.
          */
-        final long seqStartTime = System.currentTimeMillis();
+        final long seqStartTime = System.nanoTime();
         for (int r = 0; r < REPEATS; r++) {
             seqArraySum(input);
         }
-        final long seqEndTime = System.currentTimeMillis();
+        final long seqEndTime = System.nanoTime();
 
-        final long parStartTime = System.currentTimeMillis();
+        final long parStartTime = System.nanoTime();
         for (int r = 0; r < REPEATS; r++) {
             if (useManyTaskVersion) {
                 ReciprocalArraySum.parManyTaskArraySum(input, ntasks);
@@ -95,12 +95,25 @@ public class ReciprocalArraySumTest extends TestCase {
                 ReciprocalArraySum.parArraySum(input);
             }
         }
-        final long parEndTime = System.currentTimeMillis();
+        final long parEndTime = System.nanoTime();
 
-        final long seqTime = (seqEndTime - seqStartTime) / REPEATS;
-        final long parTime = (parEndTime - parStartTime) / REPEATS;
+        final long seqTimeNanos = (seqEndTime - seqStartTime) / REPEATS;
+        final long parTimeNanos = (parEndTime - parStartTime) / REPEATS;
 
-        return (double)seqTime / (double)parTime;
+        // Convert to milliseconds for display, but keep precision
+        final double seqTimeMs = seqTimeNanos / 1_000_000.0;
+        final double parTimeMs = parTimeNanos / 1_000_000.0;
+
+        // Debug: Print timing values to understand NaN issue
+        System.out.println("DEBUG - N: " + N + ", SeqTime: " + String.format("%.3f", seqTimeMs) + "ms, ParTime: " + String.format("%.3f", parTimeMs) + "ms");
+
+        // Avoid division by zero
+        if (parTimeNanos == 0) {
+            System.out.println("WARNING: Parallel time is 0, returning speedup of 1.0");
+            return 1.0;
+        }
+
+        return (double)seqTimeNanos / (double)parTimeNanos;
     }
 
     /**
@@ -119,6 +132,7 @@ public class ReciprocalArraySumTest extends TestCase {
      */
     public void testParSimpleTwoHundredMillion() {
         final double speedup = parTestHelper(200_000_000, false, 2);
+        System.out.println("Speedup: " + speedup);
         final double minimalExpectedSpeedup = 1.5;
         final String errMsg = String.format("Se esperaba que la implementación de dos tareas en paralelo pudiera ejecutarse " +
                 "%fx veces más rápido, pero solo alcanzo a mejorar la rapidez (speedup) %fx veces", minimalExpectedSpeedup, speedup);
