@@ -182,13 +182,43 @@ public final class ReciprocalArraySum {
      */
     protected static double parManyTaskArraySum(final double[] input,
             final int numTasks) {
-        double sum = 0;
-
-        // Calcula la suma de los recíprocos de los elementos del arreglo
-        for (int i = 0; i < input.length; i++) {
-            sum += 1 / input[i];
+        
+        // Crear ForkJoinPool con el número de hilos especificado
+        ForkJoinPool pool = new ForkJoinPool(numTasks);
+        
+        // Crear un arreglo para almacenar las tareas
+        ReciprocalArraySumTask[] tasks = new ReciprocalArraySumTask[numTasks];
+        
+        // Crear las tareas usando los métodos helper para calcular los rangos
+        for (int i = 0; i < numTasks; i++) {
+            int startIndex = getChunkStartInclusive(i, numTasks, input.length);
+            int endIndex = getChunkEndExclusive(i, numTasks, input.length);
+            tasks[i] = new ReciprocalArraySumTask(startIndex, endIndex, input);
         }
-
+        
+        // Ejecutar todas las tareas en paralelo
+        // La primera tarea se ejecuta en el hilo actual
+        tasks[0].compute();
+        
+        // Las demás tareas se ejecutan de forma asíncrona
+        for (int i = 1; i < numTasks; i++) {
+            tasks[i].fork();
+        }
+        
+        // Esperar a que todas las tareas asíncronas terminen
+        for (int i = 1; i < numTasks; i++) {
+            tasks[i].join();
+        }
+        
+        // Combinar todos los resultados
+        double sum = 0;
+        for (int i = 0; i < numTasks; i++) {
+            sum += tasks[i].getValue();
+        }
+        
+        // Cerrar el pool
+        pool.shutdown();
+        
         return sum;
     }
 }
