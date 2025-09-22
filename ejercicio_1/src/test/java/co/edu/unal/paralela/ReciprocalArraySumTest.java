@@ -80,13 +80,13 @@ public class ReciprocalArraySumTest extends TestCase {
         /*
          * Ejecuta varias repeticiones de la versiones secuncial y paralela para obtener una medida más exacta del desempeño paralelo.
          */
-        final long seqStartTime = System.currentTimeMillis();
+        final long seqStartTime = System.nanoTime();
         for (int r = 0; r < REPEATS; r++) {
             seqArraySum(input);
         }
-        final long seqEndTime = System.currentTimeMillis();
+        final long seqEndTime = System.nanoTime();
 
-        final long parStartTime = System.currentTimeMillis();
+        final long parStartTime = System.nanoTime();
         for (int r = 0; r < REPEATS; r++) {
             if (useManyTaskVersion) {
                 ReciprocalArraySum.parManyTaskArraySum(input, ntasks);
@@ -95,12 +95,12 @@ public class ReciprocalArraySumTest extends TestCase {
                 ReciprocalArraySum.parArraySum(input);
             }
         }
-        final long parEndTime = System.currentTimeMillis();
+        final long parEndTime = System.nanoTime();
 
-        final long seqTime = (seqEndTime - seqStartTime) / REPEATS;
-        final long parTime = (parEndTime - parStartTime) / REPEATS;
+        final long seqTimeNanos = (seqEndTime - seqStartTime) / REPEATS;
+        final long parTimeNanos = (parEndTime - parStartTime) / REPEATS;
 
-        return (double)seqTime / (double)parTime;
+        return (double)seqTimeNanos / (double)parTimeNanos;
     }
 
     /**

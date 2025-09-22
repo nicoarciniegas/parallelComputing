@@ -149,25 +149,30 @@ public final class ReciprocalArraySum {
         // Crear ForkJoinPool con 2 hilos
         ForkJoinPool pool = new ForkJoinPool(2);
         
-        // Dividir el arreglo en dos mitades
-        int mid = input.length / 2;
-        
-        // Crear dos tareas para procesar cada mitad del arreglo
-        ReciprocalArraySumTask leftTask = new ReciprocalArraySumTask(0, mid, input);
-        ReciprocalArraySumTask rightTask = new ReciprocalArraySumTask(mid, input.length, input);
-        
-        // Ejecutar las tareas en paralelo
-        leftTask.fork();  // Ejecuta la primera tarea de forma asíncrona
-        rightTask.compute();  // Ejecuta la segunda tarea en el hilo actual
-        leftTask.join();  // Espera a que termine la primera tarea
-        
-        // Combinar los resultados
-        double sum = leftTask.getValue() + rightTask.getValue();
-        
-        // Cerrar el pool
-        pool.shutdown();
-        
-        return sum;
+        try {
+            // Dividir el arreglo en dos mitades
+            int mid = input.length / 2;
+            
+            // Crear dos tareas para procesar cada mitad del arreglo
+            ReciprocalArraySumTask leftTask = new ReciprocalArraySumTask(0, mid, input);
+            ReciprocalArraySumTask rightTask = new ReciprocalArraySumTask(mid, input.length, input);
+            
+            // Ejecutar las tareas en paralelo usando el pool personalizado
+            pool.submit(leftTask);
+            pool.submit(rightTask);
+            
+            // Esperar a que ambas tareas terminen
+            leftTask.join();
+            rightTask.join();
+            
+            // Combinar los resultados
+            double sum = leftTask.getValue() + rightTask.getValue();
+            
+            return sum;
+        } finally {
+            // Cerrar el pool en el bloque finally para asegurar que siempre se cierre
+            pool.shutdown();
+        }
     }
 
     /**
@@ -186,39 +191,37 @@ public final class ReciprocalArraySum {
         // Crear ForkJoinPool con el número de hilos especificado
         ForkJoinPool pool = new ForkJoinPool(numTasks);
         
-        // Crear un arreglo para almacenar las tareas
-        ReciprocalArraySumTask[] tasks = new ReciprocalArraySumTask[numTasks];
-        
-        // Crear las tareas usando los métodos helper para calcular los rangos
-        for (int i = 0; i < numTasks; i++) {
-            int startIndex = getChunkStartInclusive(i, numTasks, input.length);
-            int endIndex = getChunkEndExclusive(i, numTasks, input.length);
-            tasks[i] = new ReciprocalArraySumTask(startIndex, endIndex, input);
+        try {
+            // Crear un arreglo para almacenar las tareas
+            ReciprocalArraySumTask[] tasks = new ReciprocalArraySumTask[numTasks];
+            
+            // Crear las tareas usando los métodos helper para calcular los rangos
+            for (int i = 0; i < numTasks; i++) {
+                int startIndex = getChunkStartInclusive(i, numTasks, input.length);
+                int endIndex = getChunkEndExclusive(i, numTasks, input.length);
+                tasks[i] = new ReciprocalArraySumTask(startIndex, endIndex, input);
+            }
+            
+            // Ejecutar todas las tareas en paralelo usando el pool personalizado
+            for (int i = 0; i < numTasks; i++) {
+                pool.submit(tasks[i]);
+            }
+            
+            // Esperar a que todas las tareas terminen
+            for (int i = 0; i < numTasks; i++) {
+                tasks[i].join();
+            }
+            
+            // Combinar todos los resultados
+            double sum = 0;
+            for (int i = 0; i < numTasks; i++) {
+                sum += tasks[i].getValue();
+            }
+            
+            return sum;
+        } finally {
+            // Cerrar el pool en el bloque finally para asegurar que siempre se cierre
+            pool.shutdown();
         }
-        
-        // Ejecutar todas las tareas en paralelo
-        // La primera tarea se ejecuta en el hilo actual
-        tasks[0].compute();
-        
-        // Las demás tareas se ejecutan de forma asíncrona
-        for (int i = 1; i < numTasks; i++) {
-            tasks[i].fork();
-        }
-        
-        // Esperar a que todas las tareas asíncronas terminen
-        for (int i = 1; i < numTasks; i++) {
-            tasks[i].join();
-        }
-        
-        // Combinar todos los resultados
-        double sum = 0;
-        for (int i = 0; i < numTasks; i++) {
-            sum += tasks[i].getValue();
-        }
-        
-        // Cerrar el pool
-        pool.shutdown();
-        
-        return sum;
     }
 }
