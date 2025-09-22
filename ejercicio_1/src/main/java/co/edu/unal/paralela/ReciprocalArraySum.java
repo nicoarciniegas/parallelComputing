@@ -126,11 +126,31 @@ public final class ReciprocalArraySum {
 
         @Override
         protected void compute() {
-            // Calcula la suma de los recíprocos para el rango asignado
-            value = 0;
-            for (int i = startIndexInclusive; i < endIndexExclusive; i++) {
-                value += 1 / input[i];
+            // Optimización 1: Variables locales para evitar acceso a campos
+            final double[] localInput = this.input;
+            final int start = this.startIndexInclusive;
+            final int end = this.endIndexExclusive;
+            
+            double localSum = 0.0;
+            
+            // Optimización 2: Loop unrolling para reducir overhead del loop
+            int i = start;
+            int limit = end - 3; // Procesar de 4 en 4
+            
+            // Procesar 4 elementos por iteración
+            for (; i < limit; i += 4) {
+                localSum += (1.0 / localInput[i]) + 
+                           (1.0 / localInput[i + 1]) + 
+                           (1.0 / localInput[i + 2]) + 
+                           (1.0 / localInput[i + 3]);
             }
+            
+            // Procesar elementos restantes
+            for (; i < end; i++) {
+                localSum += 1.0 / localInput[i];
+            }
+            
+            this.value = localSum;
         }
     }
 
@@ -146,33 +166,24 @@ public final class ReciprocalArraySum {
     protected static double parArraySum(final double[] input) {
         assert input.length % 2 == 0;
 
-        // Crear ForkJoinPool con 2 hilos
-        ForkJoinPool pool = new ForkJoinPool(2);
+        // Dividir el arreglo en dos mitades
+        int mid = input.length / 2;
         
-        try {
-            // Dividir el arreglo en dos mitades
-            int mid = input.length / 2;
-            
-            // Crear dos tareas para procesar cada mitad del arreglo
-            ReciprocalArraySumTask leftTask = new ReciprocalArraySumTask(0, mid, input);
-            ReciprocalArraySumTask rightTask = new ReciprocalArraySumTask(mid, input.length, input);
-            
-            // Ejecutar las tareas en paralelo usando el pool personalizado
-            pool.submit(leftTask);
-            pool.submit(rightTask);
-            
-            // Esperar a que ambas tareas terminen
-            leftTask.join();
-            rightTask.join();
-            
-            // Combinar los resultados
-            double sum = leftTask.getValue() + rightTask.getValue();
-            
-            return sum;
-        } finally {
-            // Cerrar el pool en el bloque finally para asegurar que siempre se cierre
-            pool.shutdown();
-        }
+        // Crear dos tareas para procesar cada mitad del arreglo
+        ReciprocalArraySumTask leftTask = new ReciprocalArraySumTask(0, mid, input);
+        ReciprocalArraySumTask rightTask = new ReciprocalArraySumTask(mid, input.length, input);
+        
+        // Ejecutar la tarea izquierda en un hilo separado
+        leftTask.fork();
+        
+        // Ejecutar la tarea derecha en el hilo actual (más eficiente)
+        rightTask.compute();
+        
+        // Esperar a que la tarea izquierda termine y obtener su resultado
+        leftTask.join();
+        
+        // Combinar los resultados
+        return leftTask.getValue() + rightTask.getValue();
     }
 
     /**
@@ -188,40 +199,43 @@ public final class ReciprocalArraySum {
     protected static double parManyTaskArraySum(final double[] input,
             final int numTasks) {
         
-        // Crear ForkJoinPool con el número de hilos especificado
-        ForkJoinPool pool = new ForkJoinPool(numTasks);
+        // Optimización 1: Usar número óptimo de tareas
+        // No más tareas que cores disponibles o elementos/1000
+        final int optimalTasks = Math.min(numTasks, 
+                                        Math.min(Runtime.getRuntime().availableProcessors(),
+                                                input.length / 1000));
+        final int actualTasks = Math.max(1, optimalTasks);
         
-        try {
-            // Crear un arreglo para almacenar las tareas
-            ReciprocalArraySumTask[] tasks = new ReciprocalArraySumTask[numTasks];
-            
-            // Crear las tareas usando los métodos helper para calcular los rangos
-            for (int i = 0; i < numTasks; i++) {
-                int startIndex = getChunkStartInclusive(i, numTasks, input.length);
-                int endIndex = getChunkEndExclusive(i, numTasks, input.length);
-                tasks[i] = new ReciprocalArraySumTask(startIndex, endIndex, input);
-            }
-            
-            // Ejecutar todas las tareas en paralelo usando el pool personalizado
-            for (int i = 0; i < numTasks; i++) {
-                pool.submit(tasks[i]);
-            }
-            
-            // Esperar a que todas las tareas terminen
-            for (int i = 0; i < numTasks; i++) {
-                tasks[i].join();
-            }
-            
-            // Combinar todos los resultados
-            double sum = 0;
-            for (int i = 0; i < numTasks; i++) {
-                sum += tasks[i].getValue();
-            }
-            
-            return sum;
-        } finally {
-            // Cerrar el pool en el bloque finally para asegurar que siempre se cierre
-            pool.shutdown();
+        // Optimización 2: Si el trabajo es muy pequeño, ejecutar secuencialmente
+        if (input.length < 10000) {
+            return seqArraySum(input);
         }
+        
+        // Crear un arreglo para almacenar las tareas
+        ReciprocalArraySumTask[] tasks = new ReciprocalArraySumTask[actualTasks];
+        
+        // Crear las tareas usando los métodos helper para calcular los rangos
+        for (int i = 0; i < actualTasks; i++) {
+            int startIndex = getChunkStartInclusive(i, actualTasks, input.length);
+            int endIndex = getChunkEndExclusive(i, actualTasks, input.length);
+            tasks[i] = new ReciprocalArraySumTask(startIndex, endIndex, input);
+        }
+        
+        // Ejecutar todas las tareas excepto la última usando fork()
+        for (int i = 0; i < actualTasks - 1; i++) {
+            tasks[i].fork();
+        }
+        
+        // Ejecutar la última tarea en el hilo actual
+        tasks[actualTasks - 1].compute();
+        
+        // Esperar a que todas las tareas forked terminen y combinar resultados
+        double sum = tasks[actualTasks - 1].getValue();
+        for (int i = 0; i < actualTasks - 1; i++) {
+            tasks[i].join();
+            sum += tasks[i].getValue();
+        }
+        
+        return sum;
     }
 }
