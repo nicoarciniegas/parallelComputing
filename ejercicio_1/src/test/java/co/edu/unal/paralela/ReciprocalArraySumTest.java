@@ -112,6 +112,7 @@ public class ReciprocalArraySumTest extends TestCase {
         final String errMsg = String.format("Se esperaba que la implementación de dos tareas en paralelo pudiera ejecutarse " +
                 " %fx veces más rápido, pero solo alcanzo a mejorar la rapidez (speedup) %fx veces", minimalExpectedSpeedup, speedup);
         assertTrue(errMsg, speedup >= minimalExpectedSpeedup);
+        System.out.println("Speedup de la implementación de dos tareas en paralelo: " + speedup);
     }
 
     /**
@@ -123,6 +124,7 @@ public class ReciprocalArraySumTest extends TestCase {
         final String errMsg = String.format("Se esperaba que la implementación de dos tareas en paralelo pudiera ejecutarse " +
                 "%fx veces más rápido, pero solo alcanzo a mejorar la rapidez (speedup) %fx veces", minimalExpectedSpeedup, speedup);
         assertTrue(errMsg, speedup >= minimalExpectedSpeedup);
+        System.out.println("Speedup de la implementación de dos tareas en paralelo: " + speedup);
     }
 
     /**
@@ -136,6 +138,7 @@ public class ReciprocalArraySumTest extends TestCase {
         final String errMsg = String.format("Se esperaba que la implmentación de muchas tareas en paralelo pudiera ejecutarse " +
                 "%fx veces más rápido, pero solo alcanzo a mejorar la rapidez (speedup) %fx veces", minimalExpectedSpeedup, speedup);
         assertTrue(errMsg, speedup >= minimalExpectedSpeedup);
+        System.out.println("Speedup de la implementación de muchas tareas en paralelo: " + speedup);
     }
 
     /**
@@ -148,5 +151,6 @@ public class ReciprocalArraySumTest extends TestCase {
         final String errMsg = String.format("Se esperaba que la implmentación de muchas tareas en paralelo pudiera ejecutarse " +
                 " %fx veces más rápido, pero solo alcanzo a mejorar la rapidez (speedup) %fx veces", minimalExpectedSpeedup, speedup);
         assertTrue(errMsg, speedup >= minimalExpectedSpeedup);
+        System.out.println("Speedup de la implementación de muchas tareas en paralelo: " + speedup);
     }
 }

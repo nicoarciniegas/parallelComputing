@@ -199,39 +199,27 @@ public final class ReciprocalArraySum {
     protected static double parManyTaskArraySum(final double[] input,
             final int numTasks) {
         
-        // Optimización 1: Usar número óptimo de tareas
-        // No más tareas que cores disponibles o elementos/1000
-        final int optimalTasks = Math.min(numTasks, 
-                                        Math.min(Runtime.getRuntime().availableProcessors(),
-                                                input.length / 1000));
-        final int actualTasks = Math.max(1, optimalTasks);
-        
-        // Optimización 2: Si el trabajo es muy pequeño, ejecutar secuencialmente
-        if (input.length < 10000) {
-            return seqArraySum(input);
-        }
-        
         // Crear un arreglo para almacenar las tareas
-        ReciprocalArraySumTask[] tasks = new ReciprocalArraySumTask[actualTasks];
+        ReciprocalArraySumTask[] tasks = new ReciprocalArraySumTask[numTasks];
         
         // Crear las tareas usando los métodos helper para calcular los rangos
-        for (int i = 0; i < actualTasks; i++) {
-            int startIndex = getChunkStartInclusive(i, actualTasks, input.length);
-            int endIndex = getChunkEndExclusive(i, actualTasks, input.length);
+        for (int i = 0; i < numTasks; i++) {
+            int startIndex = getChunkStartInclusive(i, numTasks, input.length);
+            int endIndex = getChunkEndExclusive(i, numTasks, input.length);
             tasks[i] = new ReciprocalArraySumTask(startIndex, endIndex, input);
         }
         
         // Ejecutar todas las tareas excepto la última usando fork()
-        for (int i = 0; i < actualTasks - 1; i++) {
+        for (int i = 0; i < numTasks - 1; i++) {
             tasks[i].fork();
         }
         
         // Ejecutar la última tarea en el hilo actual
-        tasks[actualTasks - 1].compute();
+        tasks[numTasks - 1].compute();
         
         // Esperar a que todas las tareas forked terminen y combinar resultados
-        double sum = tasks[actualTasks - 1].getValue();
-        for (int i = 0; i < actualTasks - 1; i++) {
+        double sum = tasks[numTasks - 1].getValue();
+        for (int i = 0; i < numTasks - 1; i++) {
             tasks[i].join();
             sum += tasks[i].getValue();
         }
