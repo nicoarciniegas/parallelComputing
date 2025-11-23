@@ -2,8 +2,11 @@ package co.edu.unal.paralela;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Map;
+import java.util.Optional;
 import java.util.HashMap;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -17,8 +20,7 @@ public final class StudentAnalytics {
      * @param studentArray Datos del estudiante para la clase.
      * @return Edad promedio de los estudiantes registrados
      */
-    public double averageAgeOfEnrolledStudentsImperative(
-            final Student[] studentArray) {
+    public double averageAgeOfEnrolledStudentsImperative(final Student[] studentArray) {
         List<Student> activeStudents = new ArrayList<Student>();
 
         for (Student s : studentArray) {
@@ -43,9 +45,15 @@ public final class StudentAnalytics {
      * @param studentArray Datos del estudiante para esta clase.
      * @return Edad promedio de los estudiantes registrados
      */
-    public double averageAgeOfEnrolledStudentsParallelStream(
-            final Student[] studentArray) {
-        throw new UnsupportedOperationException();
+    public double averageAgeOfEnrolledStudentsParallelStream(final Student[] studentArray) {
+            Stream<Student> studentStream = Arrays.stream(studentArray).parallel();
+
+            List<Student> activeStudents = studentStream.filter(Student::checkIsCurrent).collect(Collectors.toList());
+
+            double ageSum = activeStudents.parallelStream().mapToDouble(Student::getAge).sum();
+
+            return ageSum / (double) activeStudents.size();
+                
     }
 
     /**
@@ -96,9 +104,21 @@ public final class StudentAnalytics {
      * @param studentArray Datos de estudiantes para la clase.
      * @return Nombre más comun de los estudiantes inactivos.
      */
-    public String mostCommonFirstNameOfInactiveStudentsParallelStream(
-            final Student[] studentArray) {
-        throw new UnsupportedOperationException();
+    public String mostCommonFirstNameOfInactiveStudentsParallelStream(final Student[] studentArray) {
+
+        Stream<Student> studentStream = Arrays.stream(studentArray).parallel();
+        List<Student> inactiveStudents = studentStream.filter(s -> !s.checkIsCurrent()).collect(Collectors.toList());
+        Map<String, Integer> nameCounts = inactiveStudents
+            .parallelStream()
+            .collect(Collectors.groupingByConcurrent(Student::getFirstName, Collectors.summingInt(s -> 1)));
+
+        Optional<Map.Entry<String, Integer>> mostCommonEntry = nameCounts.entrySet()
+            .parallelStream()
+            .max(Map.Entry.comparingByValue());
+
+        String mostCommon = mostCommonEntry.map(Map.Entry::getKey).orElse(null);
+
+        return mostCommon;
     }
 
     /**
@@ -131,8 +151,13 @@ public final class StudentAnalytics {
      * @param studentArray Datos del estudiante para la clase.
      * @return Cantidad de calificacione sperdidas de estudiantes mayores de 20 años de edad.
      */
-    public int countNumberOfFailedStudentsOlderThan20ParallelStream(
-            final Student[] studentArray) {
-        throw new UnsupportedOperationException();
+    public int countNumberOfFailedStudentsOlderThan20ParallelStream(final Student[] studentArray) {
+        Stream<Student> studentStream = Arrays.stream(studentArray).parallel();
+        long failedStudents = studentStream
+            .filter(s -> !s.checkIsCurrent() && s.getAge()>20 && s.getGrade()<65)
+            .count();
+
+
+        return (int) failedStudents;
     }
 }
